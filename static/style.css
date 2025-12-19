@@ -1,0 +1,44 @@
+.message-bubble {
+    white-space: pre-wrap;      
+    word-wrap: break-word;      
+    word-break: break-word;     
+    max-width: 85%;            
+}
+
+
+.msg-image {
+    max-width: 100%;
+    border-radius: 12px;
+    margin-top: 5px;
+    margin-bottom: 5px;
+    display: block;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+
+
+.upload-btn {
+    cursor: pointer;
+    padding: 10px;
+    margin-right: 5px;
+    font-size: 1.2rem;
+    background: none;
+    border: none;
+}
+
+.brand-wrap {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.brand-logo {
+    height: 28px;
+    width: auto;
+    display: block;
+}
+
+.brand-title {
+    font-size: 1.2em;
+    font-weight: 800;
+    letter-spacing: 2px;
+}

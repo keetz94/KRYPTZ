@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>KRYPTZ - Chat</title>
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon-32.png') }}">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0, viewport-fit=cover">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <style>
+        html, body { height: 100vh; width: 100vw; margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; background: #fff; display: flex; overflow: hidden; }
+        * { box-sizing: border-box; scrollbar-width: none; }
+        *::-webkit-scrollbar { display: none; }
+
+        /* SIDEBAR */
+        .sidebar { width: 280px; height: 100%; background: #202c33; color: #e9edef; display: flex; flex-direction: column; flex-shrink: 0; border-right: 1px solid #2f3b43; z-index: 1001; transition: transform 0.3s ease; }
+        .sidebar-header { padding: 20px; background: #202c33; border-bottom: 1px solid #2f3b43; display: flex; align-items: center; gap: 15px; }
+        .my-avatar { width: 50px; height: 50px; border-radius: 50%; background: #fff; cursor: pointer; border: 2px solid #00a884; }
+        .sidebar-menu { flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 5px; }
+        .menu-item { display: block; padding: 12px; color: #e9edef; text-decoration: none; border-radius: 8px; transition: 0.2s; font-size: 15px; }
+        .menu-item:hover { background: #2a3942; }
+        .badge-count { background: #00a884; color: #111b21; border-radius: 12px; padding: 2px 8px; font-size: 12px; font-weight: bold; float: right; }
+        .mt-auto { margin-top: auto; border-top: 1px solid #2f3b43; padding-top: 10px; }
+
+        .online-section { margin-top: 15px; border-top: 1px solid #2f3b43; padding-top: 15px; }
+        .online-title { font-size: 0.8em; color: #8696a0; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 1px; }
+        .online-user-item { display: flex; align-items: center; gap: 10px; padding: 8px; border-radius: 6px; font-size: 14px; color: #d1d7db; }
+        .online-user-item:hover { background: #2a3942; }
+        .online-user-avatar { width: 25px; height: 25px; border-radius: 50%; border: 1px solid #00a884; }
+        .status-dot { width: 8px; height: 8px; background: #00a884; border-radius: 50%; margin-left: auto; }
+
+        /* CHAT MAIN */
+        .chat-main { flex: 1; height: 100%; display: flex; flex-direction: column; background: #efeae2; position: relative; min-width: 0; }
+
+        /* HEADER */
+        .chat-header {
+            background: #f0f2f5; padding: 10px 15px; border-left: 1px solid #d1d7db;
+            display: flex; align-items: center; height: 60px; gap: 15px; z-index: 10; flex-shrink: 0;
+        }
+        .header-info { display: flex; flex-direction: column; justify-content: center; }
+        .room-title { color: #111b21; font-weight: bold; font-size: 1.1em; }
+        .room-topic{
+          font-size: 0.8em;
+          color: #667781;
+          white-space: normal;
+          overflow: visible;
+          text-overflow: clip;
+          max-width: 70vw;
+          word-break: break-word;
+        }
+        .security-bar { background: #ffffff; color: #25d366; font-family: 'Courier New', monospace; font-size: 10px; font-weight: bold; padding: 2px 15px; display: flex; align-items: center; justify-content: center; gap: 8px; border-bottom: 1px solid #eee; box-shadow: 0 1px 2px rgba(0,0,0,0.05); flex-shrink: 0; }
+        .sec-pulse { width: 5px; height: 5px; background-color: #25d366; border-radius: 50%; box-shadow: 0 0 0 0 rgba(37, 211, 102, 0.7); animation: pulse-green 2s infinite; }
+        @keyframes pulse-green { 0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(37, 211, 102, 0.7); } 70% { transform: scale(1); box-shadow: 0 0 0 4px rgba(37, 211, 102, 0); } 100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(37, 211, 102, 0); } }
+
+        .hamburger-btn { display: none; background: none; border: none; font-size: 24px; cursor: pointer; color: #54656f; padding: 0; }
+        .overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; }
+
+        #chat-container { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 12px; }
+
+        /* MESSAGES */
+        .msg-wrapper { display: flex; gap: 12px; max-width: 85%; }
+        .msg-avatar { width: 35px; height: 35px; border-radius: 6px; background: #ddd; flex-shrink: 0; }
+        .my-msg-wrapper { align-self: flex-end; flex-direction: row-reverse; }
+        .my-msg-content { background: #d9fdd3; padding: 8px 12px; border-radius: 8px; box-shadow: 0 1px 1px rgba(0,0,0,0.1); position: relative; }
+        .other-msg-wrapper { align-self: flex-start; }
+        .other-msg-content { background: #ffffff; padding: 8px 12px; border-radius: 8px; box-shadow: 0 1px 1px rgba(0,0,0,0.1); position: relative; }
+        .sender-name { font-size: 0.75em; color: #555; margin-bottom: 2px; font-weight: bold; display: block; }
+        .msg-text { font-size: 15px; line-height: 1.4; color: #111; word-wrap: break-word; }
+        .chat-img { max-width: 100%; max-height: 300px; border-radius: 6px; margin-bottom: 5px; display: block; cursor: pointer; }
+
+        .input-area { background: #f0f2f5; padding: 10px 15px; display: flex; align-items: center; gap: 10px; position: relative; flex-shrink: 0; padding-bottom: calc(10px + env(safe-area-inset-bottom)); }
+        input[type="text"] { flex: 1; padding: 12px; border: none; border-radius: 25px; outline: none; font-size: 15px; background: #fff; padding-left: 20px; }
+        .icon-btn { background: transparent; color: #54656f; border: none; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+        .send-btn { background: #008069; color: white; border: none; padding: 10px; border-radius: 50%; width: 45px; height: 45px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        #file-input { display: none; }
+
+        #preview-area { display: none; position: absolute; bottom: 80px; left: 20px; background: white; padding: 10px; border-radius: 10px; box-shadow: 0 -2px 10px rgba(0,0,0,0.1); z-index: 99; align-items: center; gap: 10px; }
+        #preview-img { width: 50px; height: 50px; object-fit: cover; border-radius: 5px; }
+        .close-preview { cursor: pointer; color: red; font-weight: bold; }
+
+        #command-box { display: none; position: absolute; bottom: 80px; left: 20px; background: white; border-radius: 8px; box-shadow: 0 -4px 15px rgba(0,0,0,0.1); width: 300px; overflow: hidden; z-index: 100; }
+        .cmd-item { padding: 10px 15px; cursor: pointer; border-bottom: 1px solid #eee; font-size: 14px; color: #333; }
+
+        #typing-indicator { display: none; position: absolute; bottom: 80px; left: 20px; font-size: 0.85em; color: #008069; font-weight: bold; background: rgba(255,255,255,0.95); padding: 5px 12px; border-radius: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); z-index: 99; }
+
+        @media (max-width: 768px) {
+            .sidebar { position: fixed; top: 0; left: 0; height: 100%; width: 280px; transform: translateX(-100%); box-shadow: 2px 0 10px rgba(0,0,0,0.3); }
+            .sidebar.active { transform: translateX(0); }
+            .hamburger-btn { display: block; }
+            .overlay.active { display: block; }
+            .chat-header { padding-left: 10px; }
+            .msg-wrapper { max-width: 90%; }
+            html, body { height: 100dvh; }
+        }
+    </style>
+</head>
+<body>
+    <div class="overlay" onclick="toggleMenu()"></div>
+
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <a href="{{ url_for('profile') }}"><img src="{{ user.avatar }}" class="my-avatar" title="Go to Profile"></a>
+            <span style="font-weight: bold;">{{ user.username }}</span>
+        </div>
+        <div class="sidebar-menu">
+            <a href="{{ url_for('rooms') }}" class="menu-item">Rooms List</a>
+            <a href="{{ url_for('profile') }}" class="menu-item">Profile</a>
+            {% if user.is_admin %}
+            <a href="{{ url_for('admin_panel') }}" class="menu-item">Admin Panel {% if pending_count > 0 %}<span class="badge-count">{{ pending_count }}</span>{% endif %}</a>
+            {% endif %}
+            <div class="online-section">
+                <div class="online-title">Active Users</div>
+                <div id="user-list-container"></div>
+            </div>
+            <div class="mt-auto"><a href="{{ url_for('logout') }}" class="menu-item" style="color: #f15c6d;">Logout</a></div>
+        </div>
+    </div>
+
+    <div class="chat-main">
+        <div class="chat-header">
+            <button class="hamburger-btn" onclick="toggleMenu()">☰</button>
+            <div class="header-info">
+                <span class="room-title">{{ room.name }}</span>
+                <span class="room-topic" id="room-topic">{{ room.topic }}</span>
+            </div>
+        </div>
+        <div class="security-bar"><div class="sec-pulse"></div><span>SECURE CONNECTION // TLS 1.3 // ENCRYPTED</span></div>
+
+        <div id="chat-container">
+            {% for m in messages %}
+                {% if m.username == user.username %}
+                    <div class="msg-wrapper my-msg-wrapper">
+                        <img src="{{ m.temp_avatar }}" class="msg-avatar">
+                        <div class="my-msg-content">
+                            {% if m.image %}<a href="/static/uploads/{{ m.image }}" target="_blank"><img src="/static/uploads/{{ m.image }}" class="chat-img"></a>{% endif %}
+                            {% if m.temp_content %}<div class="msg-text">{{ m.temp_content }}</div>{% endif %}
+                        </div>
+                    </div>
+                {% else %}
+                    <div class="msg-wrapper other-msg-wrapper">
+                        <img src="{{ m.temp_avatar }}" class="msg-avatar">
+                        <div class="other-msg-content">
+                            <span class="sender-name">{{ m.username }}</span>
+                            {% if m.image %}<a href="/static/uploads/{{ m.image }}" target="_blank"><img src="/static/uploads/{{ m.image }}" class="chat-img"></a>{% endif %}
+                            {% if m.temp_content %}<div class="msg-text">{{ m.temp_content }}</div>{% endif %}
+                        </div>
+                    </div>
+                {% endif %}
+            {% endfor %}
+        </div>
+
+        <div id="command-box">
+            <div class="cmd-item" data-cmd="/clear "><span>/clear</span> Clear Messages (optional: /clear 50)</div>
+            <div class="cmd-item" data-cmd="/topic "><span>/topic</span> Set Room Topic</div>
+            <div class="cmd-item" data-cmd="/deletechannel"><span>/deletechannel</span> Delete Room</div>
+        </div>
+
+        <div id="typing-indicator"></div>
+
+        <div id="preview-area">
+            <img id="preview-img" src="">
+            <span id="preview-name" style="font-size:0.8em; color:#333;"></span>
+            <span class="close-preview" onclick="cancelUpload()">✕</span>
+        </div>
+
+        <div class="input-area">
+            <input type="file" id="file-input" accept="image/*">
+            <button class="icon-btn" onclick="document.getElementById('file-input').click()" title="Attach Image">
+                <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M16.5 6v11.5c0 2.21-1.79 4-4 4s-4-1.79-4-4V5a2.5 2.5 0 0 1 5 0v10.5c0 .55-.45 1-1 1s-1-.45-1-1V6H10v9.5a2.5 2.5 0 0 0 5 0V5c0-2.21-1.79-4-4-4S7 2.79 7 5v12.5c0 3.04 2.46 5.5 5.5 5.5s5.5-2.46 5.5-5.5V6h-1.5z"></path></svg>
+            </button>
+            <input type="text" id="msg-input" placeholder="Message..." autocomplete="off">
+            <button class="send-btn" onclick="sendMsg()"><svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"></path></svg></button>
+        </div>
+    </div>
+
+    <script>
+        const socket = io();
+        const username = "{{ user.username }}";
+        const chatBox = document.getElementById("chat-container");
+        const msgInput = document.getElementById("msg-input");
+        const cmdBox = document.getElementById("command-box");
+        const typingDiv = document.getElementById("typing-indicator");
+        const userListContainer = document.getElementById("user-list-container");
+        const sidebar = document.getElementById("sidebar");
+        const overlay = document.querySelector(".overlay");
+        const fileInput = document.getElementById("file-input");
+        const previewArea = document.getElementById("preview-area");
+        const roomTopicSpan = document.getElementById("room-topic");
+        let currentUploadedFilename = null;
+        const audio = new Audio("/static/notify.mp3");
+
+        let messageQueue = [];
+
+        function toggleMenu() { sidebar.classList.toggle("active"); overlay.classList.toggle("active"); }
+        document.body.addEventListener('click', function() { audio.play().then(() => { audio.pause(); audio.currentTime = 0; }).catch(e => {}); }, { once: true });
+        socket.emit('join', {});
+        chatBox.scrollTop = chatBox.scrollHeight;
+        let unreadCount = 0; const originalTitle = document.title; let typingTimeout; const typingUsers = new Set();
+        document.addEventListener("visibilitychange", function() { if (!document.hidden) { unreadCount = 0; document.title = originalTitle; } });
+
+        function escapeHtml(text) {
+            if (!text) return text;
+            return text
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
+        socket.on('update_user_list', function(data) {
+            userListContainer.innerHTML = "";
+            data.users.forEach(u => {
+                const div = document.createElement("div"); div.className = "online-user-item";
+                div.innerHTML = `<img src="${u.avatar}" class="online-user-avatar"><span>${escapeHtml(u.username)}</span><div class="status-dot"></div>`;
+                userListContainer.appendChild(div);
+            });
+        });
+
+        fileInput.addEventListener('change', function() {
+            if (this.files && this.files[0]) {
+                const file = this.files[0];
+                const formData = new FormData(); formData.append('file', file);
+                const reader = new FileReader();
+                reader.onload = function(e) { document.getElementById('preview-img').src = e.target.result; document.getElementById('preview-name').innerText = file.name; previewArea.style.display = 'flex'; }
+                reader.readAsDataURL(file);
+                fetch('/upload', { method: 'POST', body: formData }).then(r => r.json()).then(d => { if(d.filename) currentUploadedFilename = d.filename; else { alert(d.error); cancelUpload(); } }).catch(e => { alert("Err"); cancelUpload(); });
+            }
+        });
+
+        function cancelUpload() { fileInput.value = ""; previewArea.style.display = 'none'; currentUploadedFilename = null; }
+        
+
+        function sendMsg() {
+            const txt = msgInput.value.trim();
+            if (txt === "" && !currentUploadedFilename) return;
+            
+
+            messageQueue.push({
+                msg: txt,
+                image: currentUploadedFilename
+            });
+            
+
+            socket.emit('stop_typing'); 
+            clearTimeout(typingTimeout);
+            msgInput.value = ""; 
+            cmdBox.style.display = 'none'; 
+            cancelUpload(); 
+            msgInput.focus();
+        }
+
+        msgInput.addEventListener('input', function() {
+            if (this.value.startsWith('/')) cmdBox.style.display = 'block'; else cmdBox.style.display = 'none';
+            socket.emit('typing'); clearTimeout(typingTimeout); typingTimeout = setTimeout(() => { socket.emit('stop_typing'); }, 1000);
+        });
+
+        socket.on('display_typing', function(data) { if (data.is_typing) typingUsers.add(data.user); else typingUsers.delete(data.user); updateTypingUI(); });
+        function updateTypingUI() {
+            if (typingUsers.size === 0) typingDiv.style.display = 'none';
+            else { typingDiv.style.display = 'block'; typingDiv.innerText = typingUsers.size === 1 ? `${[...typingUsers][0]} typing...` : "Several people typing..."; }
+        }
+
+        document.querySelectorAll('.cmd-item').forEach(item => { item.addEventListener('click', function() { msgInput.value = this.getAttribute('data-cmd'); cmdBox.style.display = 'none'; msgInput.focus(); }); });
+        msgInput.addEventListener("keypress", function(event) { if (event.key === "Enter") sendMsg(); });
+
+        socket.on('message', function(data) {
+            typingUsers.delete(data.user); updateTypingUI();
+            const isMe = data.user === username;
+            const wrapper = document.createElement("div"); wrapper.className = isMe ? "msg-wrapper my-msg-wrapper" : "msg-wrapper other-msg-wrapper";
+
+            let imgHtml = data.image ? `<a href="/static/uploads/${data.image}" target="_blank"><img src="/static/uploads/${data.image}" class="chat-img"></a>` : "";
+            let txtHtml = data.msg ? `<div class="msg-text">${escapeHtml(data.msg)}</div>` : "";
+            const safeUsername = escapeHtml(data.user);
+
+            wrapper.innerHTML = `<img src="${data.avatar || 'https://api.dicebear.com/9.x/bottts-neutral/svg?seed=unknown'}" class="msg-avatar">` + (isMe ? `<div class="my-msg-content">${imgHtml}${txtHtml}</div>` : `<div class="other-msg-content"><span class="sender-name">${safeUsername}</span>${imgHtml}${txtHtml}</div>`);
+
+            chatBox.appendChild(wrapper); chatBox.scrollTop = chatBox.scrollHeight;
+            if (!isMe) { audio.play().catch(e => {}); if (document.hidden) { unreadCount++; document.title = `(${unreadCount}) ${originalTitle}`; } }
+        });
+
+        socket.on('cleared', () => window.location.reload());
+        socket.on('banned', (d) => { alert(d.msg); window.location.href="/logout"; });
+        socket.on('channel_deleted', () => window.location.href="/rooms");
+        socket.on('update_topic', (data) => { roomTopicSpan.innerText = escapeHtml(data.topic); });
+
+
+
+        setInterval(function() {
+            if (messageQueue.length > 0) {
+                const dataToSend = messageQueue.shift();
+                socket.emit('message', { 
+                    msg: dataToSend.msg, 
+                    image: dataToSend.image 
+                });
+            }
+        }, 700); 
+
+    </script>
+</body>
+</html>

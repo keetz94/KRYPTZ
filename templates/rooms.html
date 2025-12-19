@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>KRYPTZ - Rooms</title>
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon-32.png') }}">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
+    <style>
+        body { margin: 0; font-family: 'Segoe UI', sans-serif; background-color: #f0f2f5; }
+        .navbar {
+            background-color: #008069; padding: 15px 20px; color: white;
+            display: flex; justify-content: space-between; align-items: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1); flex-wrap: wrap; gap: 10px;
+        }
+
+
+        .brand-wrap { display:flex; align-items:center; gap:10px; }
+        .brand-logo { height: 28px; width: auto; display:block; }
+        .brand { font-size: 1.2em; font-weight: bold; letter-spacing: 2px; }
+
+        .nav-items { display: flex; align-items: center; gap: 10px; }
+        .user-display { font-weight: bold; margin-right: 10px; }
+        .nav-btn {
+            background: rgba(255,255,255,0.2); color: white; padding: 8px 15px;
+            border-radius: 4px; text-decoration: none; font-size: 0.9em;
+            transition: 0.2s; position: relative; white-space: nowrap;
+        }
+        .nav-btn:hover { background: rgba(255,255,255,0.3); }
+        .btn-admin { background: #202c33; border: 1px solid #555; }
+        .btn-logout { background: #a83232; }
+        .badge-count { background: #dc3545; color: white; border-radius: 50%; padding: 2px 6px; font-size: 11px; position: absolute; top: -5px; right: -5px; font-weight: bold; border: 1px solid white; }
+
+        .container { max-width: 600px; margin: 30px auto; padding: 0 15px; }
+        h3 { color: #555; margin-bottom: 15px; font-weight: normal; }
+        .room-card {
+            background: white; padding: 20px; border-radius: 10px; margin-bottom: 15px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1); display: flex; justify-content: space-between;
+            align-items: center; transition: transform 0.1s;
+        }
+        .room-card:hover { transform: translateY(-2px); box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .room-name { font-size: 1.1em; font-weight: 500; color: #111; word-break: break-all; }
+        .btn-join { background-color: #008069; color: white; padding: 8px 20px; border-radius: 20px; text-decoration: none; font-size: 0.9em; font-weight: 500; flex-shrink: 0; margin-left: 10px; }
+        .btn-join:hover { background-color: #006d59; }
+        .create-box { display: block; text-align: center; border: 2px dashed #cbd5e0; padding: 15px; border-radius: 10px; color: #718096; text-decoration: none; margin-top: 20px; }
+        .create-box:hover { border-color: #008069; color: #008069; background: #fff; }
+
+
+        @media (max-width: 500px) {
+            .navbar { flex-direction: column; align-items: flex-start; }
+            .nav-items { width: 100%; justify-content: space-between; margin-top: 10px; }
+            .user-display { display: none; }
+            .nav-btn { flex: 1; text-align: center; font-size: 0.8em; padding: 10px 5px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="navbar">
+
+        <div class="brand-wrap">
+            <img src="{{ url_for('static', filename='kryptz-icon.png') }}" class="brand-logo" alt="KRYPTZ">
+            <div class="brand">KRYPTZ</div>
+        </div>
+
+        <div class="nav-items">
+            <span class="user-display">{{ username }}</span>
+
+            <a href="{{ url_for('profile') }}" class="nav-btn">Profile</a>
+
+            {% if is_admin %}
+                <a href="{{ url_for('admin_panel') }}" class="nav-btn btn-admin">
+                    Admin
+                    {% if pending_count > 0 %}
+                    <span class="badge-count">{{ pending_count }}</span>
+                    {% endif %}
+                </a>
+            {% endif %}
+
+            <a href="{{ url_for('logout') }}" class="nav-btn btn-logout">Logout</a>
+        </div>
+    </div>
+
+    <div class="container">
+        <h3>Available Rooms</h3>
+        {% for room in rooms %}
+        <div class="room-card">
+            <span class="room-name">{{ room.name }}</span>
+            <a href="{{ url_for('enter_room', room_id=room.id) }}" class="btn-join">Join</a>
+        </div>
+        {% else %}
+            <p style="color: #888; text-align: center;">No rooms available yet</p>
+        {% endfor %}
+
+        {% if is_admin %}
+            <a href="{{ url_for('create_room') }}" class="create-box">+ Create New Room</a>
+        {% endif %}
+    </div>
+</body>
+</html>

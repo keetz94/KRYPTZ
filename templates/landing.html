@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <title>KRYPTZ — Secret Chat App</title>
+
+  <meta name="description" content="KRYPTZ: Secret Chat App — hızlı, sade, gizli sohbet. Giriş yap ve devam et.">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <link rel="canonical" href="https://keetz.xyz/">
+  <meta property="og:title" content="KRYPTZ — Secret Chat App">
+  <meta property="og:description" content="Hızlı, sade, gizli sohbet.">
+  <meta property="og:type" content="website">
+
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon-32.png') }}">
+
+  <style>
+    body{margin:0;font-family:Segoe UI, sans-serif;background:#0b1220;color:#e8eefc;display:flex;min-height:100vh;align-items:center;justify-content:center}
+    .box{max-width:720px;width:92%;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:18px;padding:28px;box-shadow:0 10px 30px rgba(0,0,0,.35)}
+    h1{margin:0 0 10px 0;letter-spacing:2px}
+    p{opacity:.9;line-height:1.5}
+    .btns{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px}
+    a.btn{display:inline-block;padding:12px 16px;border-radius:12px;text-decoration:none;font-weight:700}
+    .primary{background:#00b894;color:#061018}
+    .ghost{border:1px solid rgba(255,255,255,.25);color:#e8eefc}
+    .note{margin-top:16px;opacity:.7;font-size:.9em}
+  </style>
+</head>
+<body>
+  <div class="box">
+    <h1>KRYPTZ</h1>
+    <p><b>Secret Chat App</b> — hızlı, sade, gizli sohbet. İçeri girmek için giriş yapman yeter.</p>
+
+    <div class="btns">
+      <a class="btn primary" href="{{ url_for('login') }}">Login</a>
+      <a class="btn ghost" href="{{ url_for('register') }}">Sign Up</a>
+    </div>
+
+    <div class="note">Not: Uygulama içi sayfalar login gerektirir.</div>
+  </div>
+</body>
+</html>

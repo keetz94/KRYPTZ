@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Create Room</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        body { background-color: #f0f2f5; font-family: 'Segoe UI', sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .card { background: white; padding: 40px; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); width: 100%; max-width: 350px; text-align: center; }
+        h3 { margin-top: 0; color: #333; }
+        input { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box; font-size: 14px; }
+        button { width: 100%; padding: 12px; background: #333; color: white; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; margin-top: 10px; font-size: 15px; }
+        button:hover { background: #555; }
+        .back-link { display: block; margin-top: 15px; color: #666; text-decoration: none; font-size: 0.9em; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h3>Create New Room</h3>
+        
+        <form method="POST">
+            <input type="text" name="name" placeholder="Room Name" required autocomplete="off">
+            <input type="text" name="password" placeholder="Set Password" required autocomplete="off">
+            <button type="submit">Create</button>
+        </form>
+        
+        <a href="{{ url_for('rooms') }}" class="back-link">Back To List</a>
+    </div>
+</body>
+</html>

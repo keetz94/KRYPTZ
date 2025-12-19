@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>KRYPTZ - Admin Dashboard</title>
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon-32.png') }}">
+    <style>
+        body { font-family: Arial, sans-serif; background: #f0f2f5; margin: 0; padding: 0; }
+        .container { max-width: 1100px; margin: 40px auto; padding: 0 15px; }
+        .card { background: white; border-radius: 10px; box-shadow: 0 5px 15px rgba(0,0,0,0.08); padding: 20px; margin-bottom: 20px; }
+        h2 { color: #111; border-bottom: 2px solid #f0f2f5; padding-bottom: 10px; margin: 0 0 15px 0; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { text-align: left; padding: 12px; border-bottom: 1px solid #eee; vertical-align: top; }
+        th { background: #f9fafb; color: #333; font-weight: 600; }
+        tr:hover { background: #fafafa; }
+
+        .badge { display: inline-block; padding: 4px 10px; border-radius: 12px; font-size: 0.75em; font-weight: bold; white-space: nowrap; }
+        .badge-pending { background: #fff3cd; color: #856404; }
+        .badge-active { background: #d4edda; color: #155724; }
+        .badge-banned { background: #f8d7da; color: #721c24; }
+        .badge-admin { background: #cce5ff; color: #004085; margin-left: 5px; }
+
+        .btn-approve { background: #008069; color: white; padding: 8px 12px; border-radius: 6px; text-decoration: none; display: inline-block; }
+        .btn-approve:hover { filter: brightness(0.95); }
+
+        .btn-back { background: transparent; border: none; color: #008069; font-weight: bold; font-size: 1em; text-decoration: none; }
+
+        /* Actions Dropdown */
+        .dropdown { position: relative; display: inline-block; }
+        .dropbtn { background-color: #f1f3f4; color: #333; padding: 8px 12px; border: none; cursor: pointer; border-radius: 6px; font-weight: 600; }
+        .dropbtn:hover { background-color: #e2e6ea; }
+        .dropdown-content { display: none; position: absolute; right: 0; background-color: #fff; min-width: 190px; z-index: 99; border-radius: 8px; overflow: hidden; border: 1px solid #eee; box-shadow: 0 8px 24px rgba(0,0,0,0.08); }
+        .dropdown-content a, .dropdown-content button {
+            color: black; padding: 12px 14px; text-decoration: none; display: block;
+            border: none; width: 100%; background: none; text-align: left; font-size: 14px;
+            cursor: pointer; box-sizing: border-box;
+        }
+        .dropdown-content a:hover, .dropdown-content button:hover { background-color: #f6f7f8; }
+        .text-danger { color: #dc3545 !important; }
+        .text-primary { color: #007bff !important; }
+        .show { display: block; }
+
+        /* Dropdown form spacing fix */
+        .dropdown-content form { margin: 0; }
+        .dropdown-content form button { width: 100%; }
+
+        /* TOAST NOTIFICATION */
+        #toast-container { position: fixed; top: 20px; right: 20px; z-index: 2000; display: flex; flex-direction: column; gap: 10px; width: 90%; max-width: 320px; }
+        .toast { background: white; border-left: 5px solid #333; padding: 10px 14px; border-radius: 8px; box-shadow: 0 5px 12px rgba(0,0,0,0.15); animation: slideIn 0.3s ease-out forwards; opacity: 0; }
+        .toast.success { border-left-color: #28a745; }
+        .toast.error { border-left-color: #dc3545; }
+        .toast-title { font-weight: bold; display: block; margin-bottom: 5px; font-size: 0.9em; color: #333; }
+        .toast-msg { font-size: 0.9em; color: #555; }
+        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+        /* Modal */
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; z-index: 1500; }
+        .modal-box { background: white; padding: 22px; border-radius: 10px; width: 90%; max-width: 420px; box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
+        .modal-input { width: 100%; padding: 10px; margin: 12px 0 16px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; }
+        .modal-actions { display: flex; justify-content: flex-end; gap: 10px; }
+        .btn-modal-cancel { background: #eee; border: none; padding: 8px 14px; border-radius: 8px; cursor: pointer; }
+        .btn-modal-confirm { background: #dc3545; color: white; border: none; padding: 8px 14px; border-radius: 8px; cursor: pointer; font-weight: 700; }
+        .muted { color: #777; font-size: 0.85em; margin-top: 4px; }
+    </style>
+</head>
+<body>
+
+    <div id="toast-container">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                <div class="toast {{ category }}">
+                    <span class="toast-title">{{ category|upper }}</span>
+                    <span class="toast-msg">{{ message }}</span>
+                </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+    </div>
+
+    <div class="container">
+        <a href="{{ url_for('rooms') }}" class="btn-back">← Back to Rooms</a>
+
+        <div class="card">
+            <h2>Pending Approvals</h2>
+            <table>
+                <thead>
+                    <tr><th>Username</th><th>Action</th></tr>
+                </thead>
+                <tbody>
+                    {% if pending %}
+                        {% for u in pending %}
+                        <tr>
+                            <td>{{ u.username }} <span class="badge badge-pending">WAITING</span></td>
+                            <td><a href="{{ url_for('approve_user', id=u.id) }}" class="btn-approve">✔ Approve</a></td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr><td colspan="2" style="color:#999;">No pending requests</td></tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="card">
+            <h2>All Users</h2>
+            <table>
+                <thead>
+                    <tr><th>ID</th><th>Username</th><th>Status</th><th>Actions</th></tr>
+                </thead>
+                <tbody>
+                    {% for u in users %}
+                    <tr>
+                        <td>#{{ u.id }}</td>
+                        <td>
+                            {{ u.username }}
+                            {% if u.is_admin %}<span class="badge badge-admin">ADMIN</span>{% endif %}
+                        </td>
+
+
+                        <td>
+                            {% if u.is_banned %}
+                                <span class="badge badge-banned">BANNED</span>
+                                {% if u.ban_reason %}
+                                    <div style="font-size:0.8em; color:#721c24; margin-top:4px;">
+                                        Reason: {{ u.ban_reason }}
+                                    </div>
+                                {% endif %}
+                            {% else %}
+                                <span class="badge badge-active">ACTIVE</span>
+                            {% endif %}
+                        </td>
+
+                        <td>
+                            {% if u.username != 'admin' and u.id != current_user.id %}
+                            <div class="dropdown">
+                                <button onclick="toggleDrop('drop-{{ u.id }}')" class="dropbtn">Actions ▼</button>
+                                <div id="drop-{{ u.id }}" class="dropdown-content">
+
+                                    <a href="{{ url_for('toggle_admin', id=u.id) }}" class="text-primary">
+                                        {{ 'Revoke Admin' if u.is_admin else 'Make Admin' }}
+                                    </a>
+
+                                    {% if not u.is_admin %}
+                                        {% if u.is_banned %}
+                                            <form action="{{ url_for('unban_user', id=u.id) }}" method="POST" id="unban-form-{{u.id}}"></form>
+                                            <button onclick="document.getElementById('unban-form-{{u.id}}').submit()">Unban User</button>
+                                        {% else %}
+                                            <button onclick="openBanModal('{{ u.id }}', '{{ u.username }}')" class="text-danger">Ban User</button>
+                                        {% endif %}
+
+
+                                        <form action="{{ url_for('delete_user', id=u.id) }}" method="POST"
+                                              onsubmit="return confirm('Silinsin mi? Bu işlem geri alınamaz.');">
+                                            <button type="submit" class="text-danger">Delete User</button>
+                                        </form>
+                                    {% endif %}
+
+                                </div>
+                            </div>
+                            {% else %}
+                                <span style="color:#ccc; font-size:0.9em;">-</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+    </div>
+
+
+    <div id="banModal" class="modal-overlay">
+        <div class="modal-box">
+            <h3 style="margin-top:0; color:#dc3545;">Ban User</h3>
+            <p>Banning: <strong id="banTargetUser"></strong></p>
+            <form id="banForm" method="POST" action="">
+                <input type="text" name="reason" class="modal-input" placeholder="Reason (optional)" autocomplete="off">
+                <div class="modal-actions">
+                    <button type="button" class="btn-modal-cancel" onclick="closeModal()">Cancel</button>
+                    <button type="submit" class="btn-modal-confirm">Ban</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        function toggleDrop(id) {
+            document.querySelectorAll('.dropdown-content').forEach(function(el){
+                if (el.id !== id) el.classList.remove('show');
+            });
+            document.getElementById(id).classList.toggle('show');
+        }
+
+        window.onclick = function(event) {
+            if (!event.target.matches('.dropbtn')) {
+                document.querySelectorAll('.dropdown-content').forEach(function(el){
+                    el.classList.remove('show');
+                });
+            }
+        }
+
+        function openBanModal(userId, username) {
+            document.getElementById('banTargetUser').innerText = username;
+            document.getElementById('banForm').action = "{{ url_for('ban_user', id=0) }}".replace('/0', '/' + userId);
+            document.getElementById('banModal').style.display = 'flex';
+        }
+
+        function closeModal() {
+            document.getElementById('banModal').style.display = 'none';
+        }
+
+        setTimeout(function() {
+            var toasts = document.getElementsByClassName("toast");
+            for (var i = 0; i < toasts.length; i++) {
+                toasts[i].style.opacity = '0';
+                toasts[i].style.transition = 'opacity 1s';
+            }
+        }, 3000);
+    </script>
+</body>
+</html>
